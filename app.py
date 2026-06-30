@@ -1,4 +1,6 @@
 import os
+import sqlite3
+from datetime import datetime
 from flask import Flask, request, jsonify, render_template
 from google import genai
 from google.genai import types
@@ -10,6 +12,33 @@ API_KEY = os.environ.get("GEMINI_API_KEY")
 client = genai.Client(api_key=API_KEY)
 
 KNOWLEDGE_FILE = "conhecimento.txt"
+DB_FILE = os.environ.get("DB_PATH", "perguntas.db")
+
+
+def init_db():
+    with sqlite3.connect(DB_FILE) as conn:
+        conn.execute("""
+            CREATE TABLE IF NOT EXISTS perguntas (
+                id        INTEGER PRIMARY KEY AUTOINCREMENT,
+                pergunta  TEXT    NOT NULL,
+                resposta  TEXT,
+                timestamp TEXT    NOT NULL,
+                ip        TEXT
+            )
+        """)
+        conn.commit()
+
+
+def salvar_pergunta(pergunta: str, resposta: str, ip: str | None):
+    with sqlite3.connect(DB_FILE) as conn:
+        conn.execute(
+            "INSERT INTO perguntas (pergunta, resposta, timestamp, ip) VALUES (?, ?, ?, ?)",
+            (pergunta, resposta, datetime.utcnow().isoformat(), ip),
+        )
+        conn.commit()
+
+
+init_db()
 
 GEMINI_MODEL = "gemini-2.0-flash"  # modelo estável; troque se quiser usar outro
 
@@ -80,6 +109,10 @@ BASE DE CONHECIMENTO:
 
         response = chat_session.send_message(pergunta)
         resposta = response.text
+
+        ip = request.headers.get("X-Forwarded-For", request.remote_addr)
+        salvar_pergunta(pergunta, resposta, ip)
+
         return jsonify({"response": resposta})
 
     except Exception as e:
@@ -87,6 +120,22 @@ BASE DE CONHECIMENTO:
         if "token" in erro.lower() or "quota" in erro.lower() or "limit" in erro.lower():
             return jsonify({"error": "Limite de tokens atingido. Tente iniciar uma nova conversa."}), 429
         return jsonify({"error": erro}), 500
+
+@app.route("/admin/perguntas")
+def admin_perguntas():
+    senha = request.args.get("senha", "")
+    senha_correta = os.environ.get("ADMIN_SENHA", "")
+    if not senha_correta or senha != senha_correta:
+        return jsonify({"error": "Acesso negado"}), 403
+
+    with sqlite3.connect(DB_FILE) as conn:
+        conn.row_factory = sqlite3.Row
+        rows = conn.execute(
+            "SELECT id, pergunta, resposta, timestamp, ip FROM perguntas ORDER BY id DESC LIMIT 100"
+        ).fetchall()
+
+    return jsonify([dict(r) for r in rows])
+
 
 if __name__ == "__main__":
     if not API_KEY:
