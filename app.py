@@ -42,13 +42,17 @@ init_db()
 
 GEMINI_MODEL = "gemini-3.1-flash-lite-preview"
 
+
 def carregar_conhecimento():
-    """Carrega o conteúdo do arquivo de conhecimento."""
     try:
         with open(KNOWLEDGE_FILE, "r", encoding="utf-8") as f:
             return f.read().strip()
     except FileNotFoundError:
         return None
+
+
+conhecimento = carregar_conhecimento()
+
 
 @app.route("/")
 def index():
@@ -59,6 +63,9 @@ def chat():
     if not API_KEY:
         return jsonify({"error": "Chave da API não configurada no servidor."}), 500
 
+    if not conhecimento:
+        return jsonify({"error": f"Arquivo '{KNOWLEDGE_FILE}' não encontrado."}), 500
+
     data = request.json
     pergunta = data.get("message", "").strip()
     historico = data.get("history", [])
@@ -66,25 +73,14 @@ def chat():
     if not pergunta:
         return jsonify({"error": "Mensagem vazia"}), 400
 
-    conhecimento = carregar_conhecimento()
-    if not conhecimento:
-        return jsonify({"error": f"Arquivo '{KNOWLEDGE_FILE}' não encontrado."}), 500
-
-    system_prompt = f"""Você é uma assistente virtual prestativa, Lia. Responda às perguntas do usuário EXCLUSIVAMENTE com base nas informações fornecidas abaixo, seja clara direta e concisa, resumindo a resposta, não use markdown e separe os parágrafos.
-
-REGRAS IMPORTANTES:
-1. Responda APENAS com informações presentes no texto abaixo.
-2. Se a pergunta não puder ser respondida com base nessas informações, diga educadamente que não tem essa informação disponível e que a pessoa deve procurar o consultorio da UFF.
-3. Não invente, suponha ou complemente com conhecimento externo.
-4. Responda em português, de forma clara, amigável e facilitada para a gestante.
-5. Não mencione que está consultando um arquivo ou base de dados.
+    system_prompt = f"""Você é Lia, assistente de gestantes. Responda SOMENTE com base na BASE DE CONHECIMENTO abaixo, em português, de forma clara e concisa, sem markdown. Se não souber, indique o consultório da UFF. Não mencione a base de dados.
 
 BASE DE CONHECIMENTO:
 ---
 {conhecimento}
 ---"""
 
-    historico_recente = historico[-6:] if len(historico) > 6 else historico
+    historico_recente = historico[-2:] if len(historico) > 2 else historico
 
     while historico_recente and historico_recente[0]["role"] != "user":
         historico_recente = historico_recente[1:]
@@ -101,7 +97,7 @@ BASE DE CONHECIMENTO:
             model=GEMINI_MODEL,
             config=types.GenerateContentConfig(
                 system_instruction=system_prompt,
-                max_output_tokens=1000,
+                max_output_tokens=500,
                 temperature=0.2,
             ),
             history=gemini_history,
