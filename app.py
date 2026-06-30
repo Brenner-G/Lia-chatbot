@@ -15,27 +15,40 @@ KNOWLEDGE_FILE = "conhecimento.txt"
 DB_FILE = os.environ.get("DB_PATH", "/tmp/perguntas.db")
 
 
+DB_DISPONIVEL = False
+
+
 def init_db():
-    with sqlite3.connect(DB_FILE) as conn:
-        conn.execute("""
-            CREATE TABLE IF NOT EXISTS perguntas (
-                id        INTEGER PRIMARY KEY AUTOINCREMENT,
-                pergunta  TEXT    NOT NULL,
-                resposta  TEXT,
-                timestamp TEXT    NOT NULL,
-                ip        TEXT
-            )
-        """)
-        conn.commit()
+    global DB_DISPONIVEL
+    try:
+        with sqlite3.connect(DB_FILE) as conn:
+            conn.execute("""
+                CREATE TABLE IF NOT EXISTS perguntas (
+                    id        INTEGER PRIMARY KEY AUTOINCREMENT,
+                    pergunta  TEXT    NOT NULL,
+                    resposta  TEXT,
+                    timestamp TEXT    NOT NULL,
+                    ip        TEXT
+                )
+            """)
+            conn.commit()
+        DB_DISPONIVEL = True
+    except Exception as e:
+        print(f"[DB] Banco de dados indisponível: {e}. As perguntas não serão salvas.")
 
 
 def salvar_pergunta(pergunta: str, resposta: str, ip: str | None):
-    with sqlite3.connect(DB_FILE) as conn:
-        conn.execute(
-            "INSERT INTO perguntas (pergunta, resposta, timestamp, ip) VALUES (?, ?, ?, ?)",
-            (pergunta, resposta, datetime.utcnow().isoformat(), ip),
-        )
-        conn.commit()
+    if not DB_DISPONIVEL:
+        return
+    try:
+        with sqlite3.connect(DB_FILE) as conn:
+            conn.execute(
+                "INSERT INTO perguntas (pergunta, resposta, timestamp, ip) VALUES (?, ?, ?, ?)",
+                (pergunta, resposta, datetime.utcnow().isoformat(), ip),
+            )
+            conn.commit()
+    except Exception as e:
+        print(f"[DB] Erro ao salvar pergunta: {e}")
 
 
 init_db()
