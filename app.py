@@ -12,7 +12,7 @@ API_KEY = os.environ.get("GEMINI_API_KEY")
 client = genai.Client(api_key=API_KEY)
 
 KNOWLEDGE_FILE = "conhecimento.txt"
-DB_FILE = os.environ.get("DB_PATH", "perguntas.db")
+DB_FILE = os.environ.get("DB_PATH", "/tmp/perguntas.db")
 
 
 def init_db():
