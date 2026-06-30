@@ -5,13 +5,13 @@ from google.genai import types
 
 app = Flask(__name__)
 
-# A chave é lida da variável de ambiente GEMINI_API_KEY (configurada no Render)
+
 API_KEY = os.environ.get("GEMINI_API_KEY")
 client = genai.Client(api_key=API_KEY)
 
 KNOWLEDGE_FILE = "conhecimento.txt"
 
-GEMINI_MODEL = "gemini-2.0-flash"  # modelo estável; troque se quiser usar outro
+GEMINI_MODEL = "gemini-3.1-flash-lite-preview"
 
 def carregar_conhecimento():
     """Carrega o conteúdo do arquivo de conhecimento."""
