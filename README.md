@@ -6,7 +6,7 @@ Chatbot que responde **apenas** com base no conteúdo do arquivo `conhecimento.t
 ```
 chatbot/
 ├── app.py              # Servidor Flask
-├── conhecimento.txt    # Base de conhecimento (edite este arquivo!)
+├── conhecimento.txt    # Base de conhecimento
 ├── requirements.txt    # Dependências
 ├── .gitignore
 └── templates/
