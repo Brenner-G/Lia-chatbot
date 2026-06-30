@@ -40,7 +40,7 @@ def salvar_pergunta(pergunta: str, resposta: str, ip: str | None):
 
 init_db()
 
-GEMINI_MODEL = "gemini-2.0-flash"  # modelo estável; troque se quiser usar outro
+GEMINI_MODEL = "gemini-3.1-flash-lite-preview"
 
 def carregar_conhecimento():
     """Carrega o conteúdo do arquivo de conhecimento."""
